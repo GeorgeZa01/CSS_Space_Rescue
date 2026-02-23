@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSS Space Rescue: Master Flexbox</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&family=Fira+Code:wght@400;500&display=swap');
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background-color: #050505;
+            color: #e2e8f0;
+            margin: 0;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .code-editor {
+            font-family: 'Fira Code', monospace;
+            background: #1a1a2e;
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid #30363d;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+
+        .code-input {
+            background: transparent;
+            border: none;
+            color: #f8fafc;
+            width: 100%;
+            resize: none;
+            outline: none;
+            line-height: 1.5;
+            font-size: 16px;
+            caret-color: #3b82f6;
+        }
+
+        #game-board {
+            background: radial-gradient(circle at center, #1a1a2e 0%, #050505 100%);
+            position: relative;
+            border-radius: 12px;
+            box-shadow: inset 0 0 100px rgba(0,0,0,0.8);
+            border: 2px solid #1e293b;
+        }
+
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            opacity: 0.5;
+            animation: twinkle var(--duration) infinite ease-in-out;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        .ship {
+            font-size: 2.5rem;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.2);
+            z-index: 10;
+            filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.5));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 80px;
+            height: 80px;
+            flex-shrink: 0;
+        }
+
+        .target {
+            width: 80px;
+            height: 80px;
+            border: 2px dashed #3b82f6;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(59, 130, 246, 0.1);
+            position: relative;
+            z-index: 1;
+            flex-shrink: 0;
+        }
+
+        .astronaut {
+            font-size: 2.2rem;
+            animation: float 3s infinite ease-in-out;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(-5deg); }
+            50% { transform: translateY(-8px) rotate(5deg); }
+        }
+
+        .success-overlay {
+            display: none;
+            backdrop-filter: blur(12px);
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: #1e293b;
+            width: 100%;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        #progress-fill {
+            height: 100%;
+            background: #3b82f6;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        code {
+            background: #1e293b;
+            padding: 2px 4px;
+            border-radius: 4px;
+            color: #93c5fd;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9em;
+        }
+
+        #ship-container, #target-container {
+            box-sizing: border-box;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+        }
+
+        .lesson-card {
+            background: rgba(59, 130, 246, 0.05);
+            border-left: 3px solid #3b82f6;
+            padding: 12px;
+            margin-top: 15px;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .social-link {
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .social-link:hover {
+            color: #3b82f6;
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="flex flex-col md:flex-row h-full">
+        <div class="w-full md:w-1/3 p-6 flex flex-col border-r border-slate-800 bg-[#0f172a] z-20 shadow-2xl overflow-y-auto">
+            <div class="mb-6">
+                <div class="flex justify-between items-center mb-1">
+                    <h1 class="text-xl font-bold tracking-tighter text-blue-400">CSS SPACE RESCUE</h1>
+                    <span class="text-xs font-mono text-slate-500">v2.3</span>
+                </div>
+                <div class="flex justify-between items-end">
+                    <div class="text-sm font-medium text-slate-400">LEVEL <span id="current-level">1</span> OF <span id="total-levels">18</span></div>
+                </div>
+                <div class="progress-bar">
+                    <div id="progress-fill"></div>
+                </div>
+            </div>
+
+            <div id="instructions" class="mb-6">
+                <h3 class="text-white font-bold mb-2 flex items-center">
+                    <span class="mr-2">🛰️</span> Mission Briefing
+                </h3>
+                <div class="text-slate-300 leading-relaxed text-sm" id="level-desc">Loading...</div>
+                <div id="lesson-content" class="lesson-card text-xs text-slate-400 leading-relaxed"></div>
+            </div>
+
+            <div class="code-editor flex-grow flex flex-col min-h-[250px]">
+                <div class="text-slate-500 text-xs mb-2 uppercase tracking-widest font-bold">Control Terminal</div>
+                <div class="text-slate-400 text-sm mb-1">#rescue-grid {</div>
+                <div class="flex flex-grow">
+                    <div class="text-slate-600 mr-4 text-right select-none text-xs leading-6 pt-1">1<br>2<br>3<br>4<br>5</div>
+                    <div class="w-full">
+                        <div class="text-blue-500/80 text-sm italic mb-1">display: flex;</div>
+                        <textarea id="user-code" class="code-input h-full" placeholder="/* Enter coordinates... */" spellcheck="false"></textarea>
+                    </div>
+                </div>
+                <div class="text-slate-400 text-sm mt-1">}</div>
+            </div>
+
+            <div class="mt-6 flex flex-col gap-4">
+                <div class="flex gap-2">
+                    <button onclick="app.resetLevel()" class="px-4 py-2 text-xs font-bold text-slate-400 hover:text-white transition-colors">RESET LEVEL</button>
+                </div>
+                
+                <div class="flex items-center gap-4 border-t border-slate-800 pt-4 text-slate-500 text-xs font-medium">
+                    <a href="https://github.com/GeorgeZa01" target="_blank" class="social-link">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.042-1.416-4.042-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                        GitHub
+                    </a>
+                    <a href="https://linkedin.com/in/jemaile-mohamed/" target="_blank" class="social-link">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.238 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+                        LinkedIn
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div id="game-container" class="w-full md:w-2/3 p-6 bg-black relative flex flex-col">
+            <div id="game-board" class="w-full h-full relative overflow-hidden">
+                <div id="target-container" class="absolute inset-0 pointer-events-none" style="display: flex;"></div>
+                <div id="ship-container" class="absolute inset-0" style="display: flex;"></div>
+            </div>
+
+            <div id="success-overlay" class="absolute inset-0 flex items-center justify-center success-overlay z-50">
+                <div class="bg-slate-900 border border-blue-500/30 p-10 rounded-3xl text-center shadow-[0_0_50px_rgba(59,130,246,0.2)]">
+                    <div class="text-6xl mb-4">🚀</div>
+                    <h2 class="text-2xl font-bold text-white mb-2">Target Acquired!</h2>
+                    <p class="text-slate-400 mb-8 max-w-xs mx-auto">Propulsion systems optimized. Ready for the next sector.</p>
+                    <button onclick="app.nextLevel()" class="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-blue-900/20">
+                        NEXT SECTOR
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const levels = [
+            { 
+                id: 1, 
+                count: 1, 
+                description: "Move the rescue ship to the far right to reach the stranded astronaut.", 
+                lesson: "<strong>justify-content</strong> aligns items along the horizontal axis (the main axis). <code>flex-end</code> pushes items to the end of the container.",
+                winCss: "justify-content: flex-end;" 
+            },
+            { 
+                id: 2, 
+                count: 1, 
+                description: "The astronaut is stuck exactly in the horizontal center.", 
+                lesson: "Use <code>justify-content: center;</code> to move items to the middle of the main axis. This is the most common way to center elements horizontally.",
+                winCss: "justify-content: center;" 
+            },
+            { 
+                id: 3, 
+                count: 3, 
+                description: "Three astronauts are drifting with equal space between them, but there's also space at the edges.", 
+                lesson: "<code>space-around</code> distributes items so that the space between them is equal, and the space at the edges is half the size of the middle spaces.",
+                winCss: "justify-content: space-around;" 
+            },
+            { 
+                id: 4, 
+                count: 3, 
+                description: "Push the ships to the absolute edges of the sector, leaving space only between them.", 
+                lesson: "<code>space-between</code> pushes the first item to the start and the last item to the end, distributing all remaining space evenly in between.",
+                winCss: "justify-content: space-between;" 
+            },
+            { 
+                id: 5, 
+                count: 1, 
+                description: "The signal is coming from the bottom of the sector.", 
+                lesson: "<strong>align-items</strong> controls the vertical axis (the cross axis). <code>flex-end</code> moves items to the bottom of the container.",
+                winCss: "align-items: flex-end;" 
+            },
+            { 
+                id: 6, 
+                count: 1, 
+                description: "Perfect synchronization required: move the ship to the dead center of the grid.", 
+                lesson: "Combine <code>justify-content: center;</code> and <code>align-items: center;</code> for perfect 2D centering.",
+                winCss: "justify-content: center; align-items: center;" 
+            },
+            { 
+                id: 7, 
+                count: 3, 
+                description: "Change the formation to vertical to reach the astronauts stacked in a line.", 
+                lesson: "<strong>flex-direction</strong> changes the main axis. <code>column</code> stacks items from top to bottom instead of left to right.",
+                winCss: "flex-direction: column;" 
+            },
+            { 
+                id: 8, 
+                count: 3, 
+                description: "Stack the ships vertically and move them to the bottom of the sector.", 
+                lesson: "When <code>flex-direction</code> is <code>column</code>, <strong>justify-content</strong> now controls vertical movement because the main axis has rotated!",
+                winCss: "flex-direction: column; justify-content: flex-end;" 
+            },
+            { 
+                id: 9, 
+                count: 3, 
+                description: "Reverse the ship formation to match the flipped astronaut signal.", 
+                lesson: "<code>row-reverse</code> keeps items horizontal but starts them from the right and flips their visual order.",
+                winCss: "flex-direction: row-reverse;" 
+            },
+            { 
+                id: 10, 
+                count: 3, 
+                description: "A vertical reverse formation is needed in the center.", 
+                lesson: "<code>column-reverse</code> stacks items from bottom to top. It flips the start and end points of the vertical axis.",
+                winCss: "flex-direction: column-reverse; justify-content: center;" 
+            },
+            { 
+                id: 11, 
+                count: 1, 
+                description: "Land the ship at the bottom-right coordinates.", 
+                lesson: "Coordinate both axes: Use <code>justify-content</code> for horizontal and <code>align-items</code> for vertical positioning.",
+                winCss: "justify-content: flex-end; align-items: flex-end;" 
+            },
+            { 
+                id: 12, 
+                count: 10, 
+                description: "A large fleet is arriving. They are overflowing the sector boundaries!", 
+                lesson: "By default, flex items try to fit on one line. Use <strong>flex-wrap: wrap;</strong> to allow them to flow onto multiple lines.",
+                winCss: "flex-wrap: wrap;" 
+            },
+            { 
+                id: 13, 
+                count: 10, 
+                description: "Wrap the fleet and cluster all lines in the center of the sector.", 
+                lesson: "<strong>align-content</strong> is used only when there are multiple lines. It controls how the lines themselves are spaced vertically.",
+                winCss: "flex-wrap: wrap; align-content: center;" 
+            },
+            { 
+                id: 14, 
+                count: 10, 
+                description: "Push the two lines of ships to the top and bottom of the sector.", 
+                lesson: "Similar to justify-content, <code>align-content: space-between;</code> pushes the lines of wrapped items to the container edges.",
+                winCss: "flex-wrap: wrap; align-content: space-between;" 
+            },
+            { 
+                id: 15, 
+                count: 10, 
+                description: "Create vertical columns that wrap to the next column when they hit the bottom.", 
+                lesson: "Combine <code>flex-direction: column;</code> and <code>flex-wrap: wrap;</code> to create a multi-column layout.",
+                winCss: "flex-direction: column; flex-wrap: wrap;" 
+            },
+            { 
+                id: 16, 
+                count: 3, 
+                description: "Align a vertical stack precisely in the middle.", 
+                lesson: "In a <code>column</code> layout, <code>align-items: center;</code> handles the horizontal centering of the items.",
+                winCss: "flex-direction: column; justify-content: center; align-items: center;" 
+            },
+            { 
+                id: 17, 
+                count: 2, 
+                description: "Maximum separation: Two ships, one top, one bottom.", 
+                lesson: "In <code>column</code> mode, <code>justify-content: space-between;</code> creates vertical separation between elements.",
+                winCss: "flex-direction: column; justify-content: space-between;" 
+            },
+            { 
+                id: 18, 
+                count: 1, 
+                description: "Final Mission: Precise docking at the bottom center.", 
+                lesson: "You've mastered the main axis and cross axis. Flexbox is the foundation of modern web layouts. Good luck, pilot!",
+                winCss: "justify-content: center; align-items: flex-end;" 
+            }
+        ];
+
+        const app = {
+            currentLevelIndex: 0,
+            isSuccess: false,
+            winTimeout: null,
+            
+            init() {
+                this.renderStars();
+                this.loadLevel(0);
+                this.setupEventListeners();
+                document.getElementById('total-levels').innerText = levels.length;
+                window.addEventListener('resize', () => this.checkWin());
+            },
+
+            renderStars() {
+                const board = document.getElementById('game-board');
+                for (let i = 0; i < 80; i++) {
+                    const star = document.createElement('div');
+                    star.className = 'star';
+                    const size = Math.random() * 2 + 1;
+                    star.style.width = size + 'px';
+                    star.style.height = size + 'px';
+                    star.style.left = Math.random() * 100 + '%';
+                    star.style.top = Math.random() * 100 + '%';
+                    star.style.setProperty('--duration', (Math.random() * 3 + 2) + 's');
+                    board.appendChild(star);
+                }
+            },
+
+            loadLevel(index) {
+                this.isSuccess = false;
+                const level = levels[index];
+                document.getElementById('level-desc').innerHTML = level.description;
+                document.getElementById('lesson-content').innerHTML = `<strong>PRO-TIP:</strong> ${level.lesson}`;
+                document.getElementById('current-level').innerText = level.id;
+                document.getElementById('user-code').value = '';
+                document.getElementById('success-overlay').style.display = 'none';
+                
+                const shipContainer = document.getElementById('ship-container');
+                const targetContainer = document.getElementById('target-container');
+                
+                shipContainer.style.cssText = 'display: flex;';
+                targetContainer.style.cssText = 'display: flex; ' + level.winCss;
+
+                shipContainer.innerHTML = '';
+                targetContainer.innerHTML = '';
+
+                for (let i = 0; i < level.count; i++) {
+                    const ship = document.createElement('div');
+                    ship.className = 'ship';
+                    ship.innerHTML = '🚀';
+                    shipContainer.appendChild(ship);
+
+                    const target = document.createElement('div');
+                    target.className = 'target';
+                    target.innerHTML = '<div class="astronaut">👨‍🚀</div>';
+                    targetContainer.appendChild(target);
+                }
+
+                document.getElementById('progress-fill').style.width = ((index) / levels.length * 100) + '%';
+            },
+
+            setupEventListeners() {
+                const input = document.getElementById('user-code');
+                input.addEventListener('input', (e) => {
+                    const code = e.target.value;
+                    const shipContainer = document.getElementById('ship-container');
+                    
+                    try {
+                        shipContainer.style.cssText = 'display: flex; ' + code;
+                        clearTimeout(this.winTimeout);
+                        this.winTimeout = setTimeout(() => this.checkWin(), 100);
+                    } catch (err) {}
+                });
+
+                input.addEventListener('keydown', function(e) {
+                    if (e.key === 'Tab') {
+                        e.preventDefault();
+                        const start = this.selectionStart;
+                        const end = this.selectionEnd;
+                        this.value = this.value.substring(0, start) + "  " + this.value.substring(end);
+                        this.selectionStart = this.selectionEnd = start + 2;
+                    }
+                });
+            },
+
+            checkWin() {
+                if (this.isSuccess) return;
+
+                const ships = document.querySelectorAll('.ship');
+                const targets = document.querySelectorAll('.target');
+                if (ships.length === 0) return;
+
+                let allMatched = true;
+                const tolerance = 25;
+
+                for (let i = 0; i < ships.length; i++) {
+                    const sRect = ships[i].getBoundingClientRect();
+                    const tRect = targets[i].getBoundingClientRect();
+
+                    const sCenterX = sRect.left + sRect.width / 2;
+                    const sCenterY = sRect.top + sRect.height / 2;
+                    const tCenterX = tRect.left + tRect.width / 2;
+                    const tCenterY = tRect.top + tRect.height / 2;
+
+                    const distance = Math.sqrt(Math.pow(sCenterX - tCenterX, 2) + Math.pow(sCenterY - tCenterY, 2));
+                    
+                    if (distance > tolerance) {
+                        allMatched = false;
+                        break;
+                    }
+                }
+
+                if (allMatched) {
+                    this.isSuccess = true;
+                    this.showSuccess();
+                }
+            },
+
+            showSuccess() {
+                document.getElementById('success-overlay').style.display = 'flex';
+                document.querySelectorAll('.ship').forEach(s => {
+                    s.style.transform = 'scale(1.3) rotate(360deg)';
+                });
+            },
+
+            resetLevel() {
+                this.loadLevel(this.currentLevelIndex);
+            },
+
+            nextLevel() {
+                this.currentLevelIndex++;
+                if (this.currentLevelIndex < levels.length) {
+                    this.loadLevel(this.currentLevelIndex);
+                } else {
+                    document.getElementById('success-overlay').innerHTML = `
+                        <div class="bg-slate-900 border border-yellow-500/30 p-10 rounded-3xl text-center shadow-2xl">
+                            <div class="text-6xl mb-4">🏆</div>
+                            <h2 class="text-2xl font-bold text-white mb-2">Grand Master Navigator</h2>
+                            <p class="text-slate-400 mb-8 max-w-xs mx-auto">Flexbox Galaxy Secured. You are the ultimate CSS Pilot.</p>
+                            <button onclick="location.reload()" class="w-full py-4 bg-yellow-600 text-white rounded-xl font-bold hover:bg-yellow-500 transition-all">RESTART CAMPAIGN</button>
+                        </div>
+                    `;
+                    document.getElementById('success-overlay').style.display = 'flex';
+                }
+            }
+        };
+
+        window.onload = () => app.init();
+    </script>
+</body>
+</html>
