@@ -1,5 +1,6 @@
 # CSS_Space_Rescue
 CSS Space Rescue: Master Flexbox
+<img width="1919" height="864" alt="image" src="https://github.com/user-attachments/assets/bec3eb7d-031e-457f-8770-96197179d723" />
 
 CSS Space Rescue is an interactive, gamified learning experience designed to teach the fundamentals of CSS Flexbox. Players act as a space navigator, using CSS properties to position rescue ships and save stranded astronauts across 18 increasingly challenging levels.
 
